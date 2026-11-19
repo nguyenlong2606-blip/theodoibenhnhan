@@ -14,7 +14,8 @@ header{padding:14px 14px 0}h1{font-size:18px;margin:0 0 10px}
 nav{display:flex;gap:6px;padding:0 14px 10px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
 nav button{flex:1 1 0;min-width:0;padding:10px 4px;line-height:1.25;overflow-wrap:break-word;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font-size:14px;font-weight:600}
 nav button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
-main{padding:0 14px 40px;max-width:760px;margin:auto}
+main{padding:0 14px 40px;max-width:1280px;margin:auto}
+.card:not(.wide){max-width:760px;margin-left:auto;margin-right:auto}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 select,input{font:inherit;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);min-width:0}
@@ -33,11 +34,13 @@ label{font-size:13px;color:var(--mu);display:block;margin:8px 0 4px}
 .bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri)}
 .bar.full i{background:var(--bad)}
 .wrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap}
-th,td{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:right}
-th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
-th{font-size:12px;color:var(--mu);font-weight:600}
-tfoot td{font-weight:800;border-top:2px solid var(--tx)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{white-space:nowrap}th{white-space:normal;line-height:1.25}
+th,td{padding:9px 8px;border:1px solid var(--gd,#a9b4bf);text-align:center}
+:root[data-theme="dark"] table{--gd:#3e4c59}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) table{--gd:#3e4c59}}
+td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}th:first-child{position:sticky;left:0}tfoot td:first-child{background:var(--bg)}
+th{font-size:12px;color:var(--tx);font-weight:800;text-transform:uppercase;text-align:center;vertical-align:middle;background:var(--bg)}
+tfoot td{font-weight:800;border-top:2px solid var(--tx);background:var(--bg)}
 .bad{color:var(--bad);font-weight:700}.ok{color:var(--ok)}.in{color:var(--in)}.out{color:var(--out)}
 .log{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:14px}
 .log button,.sm{border:1px solid var(--bd);background:var(--bg);color:var(--mu);border-radius:8px;padding:6px 10px;font-size:13px}
@@ -55,7 +58,10 @@ const CFG={p:"benhviendakhoatanuyen",k:"AIzaSyDvPKeRtt-t9_FiTOs__wwi2axK8S0EooQ"
 const TABS=[["sum","Tổng hợp"],["pk","Bệnh nhân vào viện"],["khoa","Bệnh nhân ra viện"],["ct","Bệnh nhân chuyển tỉnh"],["xf","Chuyển khoa"],["day","Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày"],["set","Cài đặt"]];
 let tab="sum",wards=[],events=[],db=null,ready=false,selK="",selP="",qty={pk:1,khoa:1,xf:1,ct:1},xFrom="",xTo="";
 const $=id=>document.getElementById(id);
-let pend="",tt,pinHash="",unlocked=false,selDay="",archDay="",archSel="",actual={},when={pk:"",khoa:"",xf:"",ct:""},editId="",editN="",editA="",me=loadMe(),pkHash="";
+let pend="",tt,pinHash="",unlocked=false,selDay="",archDay="",archSel="",actual={},when={pk:"",khoa:"",xf:"",ct:""},editId="",editN="",editA="",me=loadMe(),pkHash="",adHash="",selA="";
+const isAd=()=>!!me&&me.t==="admin";
+const curW=()=>isAd()?(wards.find(w=>w.id===selA)?selA:(selA=(wards[0]||{}).id)):me.id;
+const wardHead=r=>isAd()?`<label>Khoa (quản trị chọn khoa)</label><select onchange="selA=this.value;render()">${opts(r.id)}</select>`:`<p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>`;
 const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const addDays=(s,n)=>{const[y,m,d]=s.split("-").map(Number);return ymd(new Date(y,m-1,d+n))};
 const vnDate=s=>s.split("-").reverse().join("/");
@@ -63,13 +69,13 @@ const isTruc=ts=>{const d=new Date(ts),m=d.getHours()*60+d.getMinutes();return m
 function censusAt(w,d){let c=w.base||0;events.forEach(e=>{if(e.day>d)return;if(e.type==="xfer"){if(e.ward===w.id)c-=e.n;if(e.to===w.id)c+=e.n}else if(e.ward===w.id)c+=e.type==="in"?e.n:-e.n});return Math.max(0,c)}
 function renderXf(a,rows){
   if(wards.length<2){a.innerHTML=`<div class="card msg">Cần có ít nhất 2 khoa để chuyển khoa.</div>`;return}
-  xFrom=me.id;
+  xFrom=curW();
   if(xTo===xFrom||!wards.find(w=>w.id===xTo))xTo=wards.find(w=>w.id!==xFrom).id;
   const f=rows.find(r=>r.id===xFrom),g=rows.find(r=>r.id===xTo);
   const nm=id=>(wards.find(w=>w.id===id)||{name:"?"}).name;
   const l=events.filter(e=>e.type==="xfer"&&e.day===today()).sort((x,y)=>y.ts-x.ts).slice(0,15);
   a.innerHTML=`<div class="card"><b>Chuyển bệnh nhân giữa các khoa</b><p class="mu">Chuyển khoa không tính là ra viện hay nhập viện mới.</p>
-  <label>Chuyển từ khoa</label><p style="font-size:17px;margin:8px 0"><b>${esc(f.name)}</b></p>
+  <label>Chuyển từ khoa</label>${isAd()?`<select onchange="selA=this.value;render()">${opts(xFrom)}</select>`:`<p style="font-size:17px;margin:8px 0"><b>${esc(f.name)}</b></p>`}
   <label>Chuyển đến khoa</label><select onchange="xTo=this.value;render()">${opts(xTo,xFrom)}</select>
   <div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><b>${f.cur}</b><span>Đang ĐT: ${esc(f.name)}</span></div><div class="stat"><b>${g.cur}</b><span>Đang ĐT: ${esc(g.name)}</span></div></div>
   <label>Số bệnh nhân chuyển</label>${stepper("xf")}${whenPicker("xf")}<button class="go pri" onclick="addXf()">⇄ Chuyển khoa</button></div>
@@ -109,10 +115,10 @@ function renderDay(a){
   const hist=days.map(x=>{const l=events.filter(e=>e.day===x);return{day:x,i:sum(l,"in"),o:sumO(l),c:wards.reduce((s,w)=>s+censusAt(w,x),0)}});
   a.innerHTML=`<div class="card"><b>Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày</b>
   <div class="row" style="margin-top:8px"><input type="date" id="dd" value="${d}" max="${t}" style="flex:1" onchange="selDay=this.value||'';render()"><button class="sm" onclick="selDay='';render()">Hôm nay</button></div></div>
-  <div class="card wrap"><b>Ngày ${vnDate(d)}</b><table style="margin-top:6px"><thead><tr><th>Khoa</th><th>Vào<br>7h30–17h</th><th>Vào trực<br>17h–7h30</th><th>Ra viện<br>(gồm CT)</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển đến</th><th>Chuyển đi</th><th>Đang ĐT cuối ngày</th></tr></thead><tbody>
+  <div class="card wrap wide"><b>Ngày ${vnDate(d)}</b><table style="margin-top:6px"><thead><tr><th>Khoa</th><th>Vào trong ngày<br>7h30–16h59</th><th>Vào kíp trực<br>17h00–7h29</th><th>Ra viện</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển đến</th><th>Chuyển đi</th><th>BN hiện có cuối ngày</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="in">+${r.i-r.tr}</td><td class="in">+${r.tr}</td><td class="out">−${r.o}</td><td class="out">${r.ct}</td><td class="in">+${r.xi}</td><td class="out">−${r.xo}</td><td>${r.c}</td></tr>`).join("")}
   </tbody><tfoot><tr><td>TỔNG</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td><td class="in">+${T.xi}</td><td class="out">−${T.xo}</td><td>${T.c}</td></tr></tfoot></table></div>
-  <div class="card wrap"><b>14 ngày gần nhất</b><p class="mu">Bấm vào một ngày để xem chi tiết theo khoa.</p><table><thead><tr><th>Ngày</th><th>Vào viện (cả 2 kíp)</th><th>Ra viện (gồm chuyển tỉnh)</th><th>Đang ĐT cuối ngày</th></tr></thead><tbody>
+  <div class="card wrap"><b>14 ngày gần nhất</b><p class="mu">Bấm vào một ngày để xem chi tiết theo khoa.</p><table><thead><tr><th>Ngày</th><th>Vào viện (cả 2 kíp)</th><th>Ra viện (gồm chuyển tỉnh)</th><th>BN hiện có cuối ngày</th></tr></thead><tbody>
   ${hist.map(h=>`<tr onclick="selDay='${h.day}';render();scrollTo(0,0)" style="cursor:pointer${h.day===d?";font-weight:700":""}"><td>${vnDate(h.day)}</td><td class="in">+${h.i}</td><td class="out">−${h.o}</td><td>${h.c}</td></tr>`).join("")}
   </tbody></table></div>`}
 function h53(s){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)}
@@ -133,10 +139,10 @@ const hm=t=>new Date(t).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-dig
 
 function calc(){
   const m={};
-  wards.forEach(w=>m[w.id]={...w,inT:0,inTr:0,outT:0,inA:0,outA:0,xIn:0,xOut:0,ctT:0});
+  wards.forEach(w=>m[w.id]={...w,inT:0,inTr:0,outT:0,inA:0,outA:0,xIn:0,xOut:0,ctT:0,xInT:0,xOutT:0});
   events.forEach(e=>{
     const t=e.day===today();
-    if(e.type==="xfer"){const f=m[e.ward],g=m[e.to];if(f)f.xOut+=e.n;if(g)g.xIn+=e.n;return}
+    if(e.type==="xfer"){const f=m[e.ward],g=m[e.to];if(f){f.xOut+=e.n;if(t)f.xOutT+=e.n}if(g){g.xIn+=e.n;if(t)g.xInT+=e.n}return}
     const r=m[e.ward];if(!r)return;
     if(e.type==="in"){r.inA+=e.n;if(t){r.inT+=e.n;if(isTruc(e.ts))r.inTr+=e.n}}else{r.outA+=e.n;if(t){r.outT+=e.n;if(e.type==="tinh")r.ctT+=e.n}}});
   return Object.values(m).map(r=>({...r,cur:Math.max(0,(r.base||0)+r.inA-r.outA+r.xIn-r.xOut)}));
@@ -162,22 +168,22 @@ function wardCard(r){
 function loadMe(){try{return JSON.parse(localStorage.getItem("me")||"null")}catch(e){return null}}
 function saveMe(){try{if(me)localStorage.setItem("me",JSON.stringify(me));else localStorage.removeItem("me")}catch(e){}}
 const myWard=()=>me&&me.t==="ward"?wards.find(w=>w.id===me.id):null;
-const isDefPw=()=>me.t==="pk"?(!pkHash||pkHash===hp("123")):(()=>{const w=myWard();return !w||!w.pw||w.pw===hp("123")})();
+const isDefPw=()=>me.t==="admin"?(!adHash||adHash===hp("123")):(()=>{const w=myWard();return !w||!w.pw||w.pw===hp("123")})();
 function logout(){me=null;saveMe();tab="sum";render()}
 function whoBar(){
-  if(!me){$("who").innerHTML=tab==="login"?"":`<button class="sm" style="background:var(--pri);color:#fff;border-color:var(--pri)" onclick="tab='login';render()">Đăng nhập khoa</button>`;return}
-  const nm=(myWard()||{name:"?"}).name;
+  if(!me){$("who").innerHTML=tab==="login"?"":`<button class="sm" style="background:var(--pri);color:#fff;border-color:var(--pri)" onclick="tab='login';render()">Đăng nhập</button>`;return}
+  const nm=isAd()?"Quản trị (admin)":(myWard()||{name:"?"}).name;
   $("who").innerHTML=`<span class="mu"><b>${esc(nm)}</b></span> <button class="sm" style="${isDefPw()?"background:var(--bad);color:#fff;border-color:var(--bad)":""}" onclick="tab='acc';render()">Đổi mật khẩu</button> <button class="sm" onclick="logout()">Đăng xuất</button>`}
 function renderLogin(a){
-  a.innerHTML=`<div class="card"><b>Đăng nhập</b><p class="mu">Chỉ các khoa cần đăng nhập để nhập số liệu. Xem biểu tổng thì không cần đăng nhập. Mật khẩu mặc định là <b>123</b>, hãy đổi sau khi đăng nhập.</p>
-  <label>Khoa</label><select id="lu">${wards.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("")}</select>
+  a.innerHTML=`<div class="card"><b>Đăng nhập</b><p class="mu">Các khoa và quản trị đăng nhập để nhập số liệu. Xem biểu tổng thì không cần đăng nhập. Mật khẩu mặc định là <b>123</b>, hãy đổi sau khi đăng nhập.</p>
+  <label>Tài khoản</label><select id="lu"><option value="admin">Quản trị (admin)</option>${wards.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("")}</select>
   <label>Mật khẩu</label><input id="lp" type="password" style="width:100%" onkeydown="if(event.key==='Enter')doLogin()">
   <button class="go pri" onclick="doLogin()">Đăng nhập</button><button class="sm" style="margin-top:8px" onclick="tab='sum';render()">← Quay lại biểu tổng</button></div>`}
 function doLogin(){
   const u=$("lu").value,pw=hp($("lp").value),w=wards.find(x=>x.id===u);
-  const ok=!!w&&pw===(w.pw||hp("123"));
+  const ok=u==="admin"?pw===(adHash||hp("123")):!!w&&pw===(w.pw||hp("123"));
   if(!ok){toast("Sai mật khẩu");$("lp").value="";return}
-  me={t:"ward",id:u};saveMe();tab="pk";render()}
+  me=u==="admin"?{t:"admin"}:{t:"ward",id:u};saveMe();tab=u==="admin"?"sum":"pk";render()}
 function renderAcc(a){
   a.innerHTML=`<div class="card"><b>Đổi mật khẩu</b>${isDefPw()?`<p class="bad">Bạn đang dùng mật khẩu mặc định 123, hãy đổi ngay.</p>`:""}
   <label>Mật khẩu hiện tại</label><input id="o1" type="password" style="width:100%">
@@ -186,14 +192,14 @@ function renderAcc(a){
   <button class="go pri" onclick="changeMyPw()">Đổi mật khẩu</button></div>`}
 async function changeMyPw(){
   const cur=hp($("o1").value),n1=$("o2").value,n2=$("o3").value,w=myWard();
-  const curOk=me.t==="pk"?cur===(pkHash||hp("123")):!!w&&cur===(w.pw||hp("123"));
+  const curOk=me.t==="admin"?cur===(adHash||hp("123")):!!w&&cur===(w.pw||hp("123"));
   if(!curOk)return toast("Mật khẩu hiện tại không đúng");
   if(n1.length<4)return toast("Mật khẩu mới tối thiểu 4 ký tự");
   if(n1!==n2)return toast("Hai ô mật khẩu mới không khớp");
-  try{if(me.t==="pk")await db.setPk(hp(n1));else await db.doc("wards/"+me.id).update({pw:hp(n1)});toast("Đã đổi mật khẩu");tab=allowed()[0];render()}catch(e){toast("Lỗi: "+e.message)}}
+  try{if(me.t==="admin")await db.setAd(hp(n1));else await db.doc("wards/"+me.id).update({pw:hp(n1)});toast("Đã đổi mật khẩu");tab=allowed()[0];render()}catch(e){toast("Lỗi: "+e.message)}}
 async function resetPw(id){
   if(!ask("rs"+id))return;
-  try{if(id==="pk")await db.setPk(hp("123"));else await db.doc("wards/"+id).update({pw:hp("123")});toast("Đã đặt lại mật khẩu về 123");render()}catch(e){toast("Lỗi: "+e.message)}}
+  try{if(id==="admin")await db.setAd(hp("123"));else await db.doc("wards/"+id).update({pw:hp("123")});toast("Đã đặt lại mật khẩu về 123");render()}catch(e){toast("Lỗi: "+e.message)}}
 const repDay=ts=>ymd(new Date(ts-27000000));
 const dtl=t=>{const d=new Date(t);return ymd(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const minAt=()=>{const[y,m,d]=addDays(today(),-3).split("-").map(Number);return new Date(y,m-1,d,7,30).getTime()};
@@ -208,7 +214,7 @@ function whenPicker(k){
   let h=`<label>Thời điểm ghi nhận</label><select onchange="setWhenMode('${k}',this.value)"><option value="now"${v?"":" selected"}>Bây giờ</option><option value="custom"${v?" selected":""}>Chọn ngày giờ khác (nhập bù, tối đa 3 ngày trước)</option></select>`;
   if(v){const ts=new Date(v).getTime();
     h+=`<input type="datetime-local" value="${v}" min="${dtl(minAt())}" max="${dtl(Date.now())}" style="width:100%;margin-top:6px" onchange="when['${k}']=this.value;render()">`;
-    if(ts)h+=`<p class="mu">→ ${isTruc(ts)?"Kíp trực (17h–7h30)":"Giờ hành chính (7h30–17h)"} · ngày báo cáo ${vnDate(repDay(ts))}</p>`}
+    if(ts)h+=`<p class="mu">→ ${isTruc(ts)?"Kíp trực (17h00–7h29)":"Giờ hành chính (7h30–16h59)"} · ngày báo cáo ${vnDate(repDay(ts))}</p>`}
   return h}
 function startEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editId=id;editN=String(e.n);editA=dtl(e.ts);render()}
 async function saveEdit(id){
@@ -234,37 +240,37 @@ function render(){
   nav();const a=$("app");
   if(!ready){a.innerHTML=`<div class="msg">Đang tải dữ liệu…</div>`;return}
   if(!db){a.innerHTML=`<div class="msg">Không kết nối được cơ sở dữ liệu. Kiểm tra internet và cấu hình.</div>`;return}
-  if(me&&(me.t!=="ward"||!wards.find(w=>w.id===me.id))){logout();return}
+  if(me&&!isAd()&&(me.t!=="ward"||!wards.find(w=>w.id===me.id))){logout();return}
   whoBar();
-  if(tab==="login"){if(me){tab="pk";return render()}if(!wards.length){a.innerHTML=`<div class="card msg">Chưa có khoa nào. Vào tab <b>Cài đặt</b> để thêm khoa trước.</div>`;return}return renderLogin(a)}
+  if(tab==="login"){if(me){tab=allowed()[0];return render()}return renderLogin(a)}
   if(tab==="acc"){if(!me){tab="sum";return render()}return renderAcc(a)}
   const rows=calc();
-  if(tab==="set"){return unlocked?renderSet(a):renderLock(a)}
+  if(tab==="set"){return unlocked||isAd()?renderSet(a):renderLock(a)}
   if(!wards.length){a.innerHTML=`<div class="card msg">Chưa có khoa nào. Vào tab <b>Cài đặt</b> để thêm khoa và số giường kế hoạch.</div>`;return}
   if(tab==="day")return renderDay(a);
   if(tab==="xf")return renderXf(a,rows);
   if(tab==="sum"){
-    const T=rows.reduce((s,r)=>({b:s.b+(+r.beds||0),c:s.c+r.cur,i:s.i+r.inT,o:s.o+r.outT,ol:s.ol+censusAt(r,addDays(today(),-1)),tr:s.tr+r.inTr,ct:s.ct+r.ctT}),{b:0,c:0,i:0,o:0,ol:0,tr:0,ct:0});
+    const T=rows.reduce((s,r)=>({b:s.b+(+r.beds||0),c:s.c+r.cur,i:s.i+r.inT,o:s.o+r.outT,ol:s.ol+censusAt(r,addDays(today(),-1)),tr:s.tr+r.inTr,ct:s.ct+r.ctT,xi:s.xi+r.xInT,xo:s.xo+r.xOutT}),{b:0,c:0,i:0,o:0,ol:0,tr:0,ct:0,xi:0,xo:0});
     const pct=T.b?Math.round(T.c/T.b*100):0;
-    a.innerHTML=`<div class="card"><div class="stats"><div class="stat"><b>${T.c}</b><span>Đang điều trị</span></div><div class="stat"><b>${T.b}</b><span>Giường KH</span></div><div class="stat"><b class="${T.b-T.c<0?"bad":"ok"}">${T.b-T.c}</b><span>Giường trống</span></div></div>
+    a.innerHTML=`<div class="card wide"><div class="stats"><div class="stat"><b>${T.c}</b><span>Đang điều trị</span></div><div class="stat"><b>${T.b}</b><span>Giường KH</span></div><div class="stat"><b class="${T.b-T.c<0?"bad":"ok"}">${T.b-T.c}</b><span>Giường trống</span></div></div>
     <div class="bar ${pct>100?"full":""}"><i style="width:${Math.min(100,pct)}%"></i></div>
-    <p class="mu">Hôm nay (${today().split("-").reverse().join("/")}): <span class="in">+${T.i} nhập viện</span> (trong đó ${T.tr} vào trực) · <span class="out">−${T.o} ra viện</span> (trong đó ${T.ct} chuyển tỉnh)</p></div>
-    <div class="card wrap"><table><thead><tr><th>Khoa</th><th>Giường KH</th><th>BN cũ</th><th>Đang ĐT</th><th>Trống</th><th>%</th><th>Vào<br>7h30–17h</th><th>Vào trực<br>17h–7h30</th><th>Ra<br>(gồm CT)</th><th>Trong đó<br>chuyển tỉnh</th></tr></thead><tbody>
-    ${rows.map(r=>{const o=censusAt(r,addDays(today(),-1)),t=(+r.beds||0)-r.cur,p=r.beds?Math.round(r.cur/r.beds*100):0;return `<tr><td>${esc(r.name)}</td><td>${r.beds||0}</td><td>${o}</td><td><b>${r.cur}</b></td><td class="${t<0?"bad":""}">${t}</td><td class="${p>100?"bad":""}">${p}%</td><td class="in">+${r.inT-r.inTr}</td><td class="in">+${r.inTr}</td><td class="out">−${r.outT}</td><td class="out">${r.ctT}</td></tr>`}).join("")}
-    </tbody><tfoot><tr><td>TỔNG</td><td>${T.b}</td><td>${T.ol}</td><td>${T.c}</td><td class="${T.b-T.c<0?"bad":""}">${T.b-T.c}</td><td>${pct}%</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td></tr></tfoot></table></div>
-    <p class="mu" style="text-align:center">Số liệu tự cập nhật khi các khoa nhập. "BN cũ" là số đang điều trị lúc 7h30 sáng nay (cuối ngày báo cáo hôm trước). Ngày báo cáo tính từ 7h30 đến 7h30 hôm sau. "Vào" là bệnh nhân vào 7h30–17h, "Vào trực" là vào 17h–7h30 hôm sau. Cột "Ra" đã gồm cả bệnh nhân chuyển tỉnh.</p>`;
+    <p class="mu">Hôm nay (${today().split("-").reverse().join("/")}): <span class="in">+${T.i} nhập viện</span> (trong đó ${T.tr} vào trực) · <span class="out">−${T.o} ra viện</span> (trong đó ${T.ct} chuyển tỉnh) · ${T.xi} lượt chuyển khoa</p></div>
+    <div class="card wrap wide"><table><thead><tr><th>Khoa</th><th>Giường KH</th><th>BN cũ</th><th>BN hiện có</th><th>Giường trống</th><th>%</th><th>Vào trong ngày<br>7h30–16h59</th><th>Vào kíp trực<br>17h00–7h29</th><th>Ra viện</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển<br>đến</th><th>Chuyển<br>đi</th></tr></thead><tbody>
+    ${rows.map(r=>{const o=censusAt(r,addDays(today(),-1)),t=(+r.beds||0)-r.cur,p=r.beds?Math.round(r.cur/r.beds*100):0;return `<tr><td>${esc(r.name)}</td><td>${r.beds||0}</td><td>${o}</td><td><b>${r.cur}</b></td><td class="${t<0?"bad":""}">${t}</td><td class="${p>100?"bad":""}">${p}%</td><td class="in">+${r.inT-r.inTr}</td><td class="in">+${r.inTr}</td><td class="out">−${r.outT}</td><td class="out">${r.ctT}</td><td class="in">+${r.xInT}</td><td class="out">−${r.xOutT}</td></tr>`}).join("")}
+    </tbody><tfoot><tr><td>TỔNG</td><td>${T.b}</td><td>${T.ol}</td><td>${T.c}</td><td class="${T.b-T.c<0?"bad":""}">${T.b-T.c}</td><td>${pct}%</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td><td class="in">+${T.xi}</td><td class="out">−${T.xo}</td></tr></tfoot></table></div>
+    <p class="mu" style="text-align:center">Số liệu tự cập nhật khi các khoa nhập. "BN cũ" là số bệnh nhân hiện có lúc 7h30 sáng nay (cuối ngày báo cáo hôm trước). Ngày báo cáo tính từ 7h30 đến 7h30 hôm sau. "Vào trong ngày" là bệnh nhân vào 7h30–16h59, "Vào kíp trực" là vào 17h00–7h29 hôm sau. Cột "Ra viện" đã gồm cả bệnh nhân chuyển tỉnh. BN hiện có = BN cũ + Vào trong ngày + Vào kíp trực − Ra viện + Chuyển đến − Chuyển đi.</p>`;
   }else if(tab==="pk"){
-    selP=me.id;const r=rows.find(x=>x.id===selP)||rows[0];
-    a.innerHTML=`<div class="card"><b>Bệnh nhân vào viện: nhập số bệnh nhân VÀO khoa</b><p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>
+    selP=curW();const r=rows.find(x=>x.id===selP)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân vào viện: nhập số bệnh nhân VÀO khoa</b>${wardHead(r)}
     <label>Số bệnh nhân vào</label>${stepper("pk")}${whenPicker("pk")}<button class="go in" onclick="addEv('in','pk',selP)">+ Nhập viện</button></div>
     <div class="card">${wardCard(r)}</div>${logList("in",selP)}`;
   }else if(tab==="ct"){
-    selK=me.id;const r=rows.find(x=>x.id===selK)||rows[0];
-    a.innerHTML=`<div class="card"><b>Bệnh nhân chuyển tỉnh: nhập số bệnh nhân CHUYỂN TUYẾN TỈNH</b><p class="mu">Bệnh nhân chuyển tỉnh được trừ khỏi số đang điều trị và tính vào cột Ra viện ở bảng tổng hợp.</p><p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>
+    selK=curW();const r=rows.find(x=>x.id===selK)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân chuyển tỉnh: nhập số bệnh nhân CHUYỂN TUYẾN TỈNH</b><p class="mu">Bệnh nhân chuyển tỉnh được trừ khỏi số đang điều trị và tính vào cột Ra viện ở bảng tổng hợp.</p>${wardHead(r)}
     ${wardCard(r)}<label>Số bệnh nhân chuyển tỉnh</label>${stepper("ct")}${whenPicker("ct")}<button class="go out" onclick="addEv('tinh','ct',selK)">↗ Chuyển tỉnh</button></div>${logList("tinh",selK)}`;
   }else{
-    selK=me.id;const r=rows.find(x=>x.id===selK)||rows[0];
-    a.innerHTML=`<div class="card"><b>Bệnh nhân ra viện: nhập số bệnh nhân RA viện</b><p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>
+    selK=curW();const r=rows.find(x=>x.id===selK)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân ra viện: nhập số bệnh nhân RA viện</b>${wardHead(r)}
     ${wardCard(r)}<label>Số bệnh nhân ra viện</label>${stepper("khoa")}${whenPicker("khoa")}<button class="go out" onclick="addEv('out','khoa',selK)">− Cho ra viện</button></div>${logList("out",selK)}`;
   }
 }
@@ -278,8 +284,8 @@ function renderSet(a){
   <div class="card"><b>Đặt lại số đang điều trị thực tế</b><p class="mu">Nhập số bệnh nhân thực tế hiện có của từng khoa (ô nào để trống thì giữ nguyên). Ứng dụng tự tính lại "BN đầu" cho khớp, các lần nhập vào, ra, chuyển khoa đã có vẫn được giữ.</p>
   ${calc().map(r=>`<div class="grid2" style="grid-template-columns:1fr 80px 90px"><span>${esc(r.name)}</span><span class="mu">Đang: <b>${r.cur}</b></span><input id="t_${r.id}" type="number" inputmode="numeric" min="0" placeholder="Thực tế" value="${actual[r.id]===undefined?"":actual[r.id]}" oninput="actual['${r.id}']=this.value"></div>`).join("")}
   <button class="go pri" onclick="setActualAll()">Áp dụng số thực tế</button></div>
-  <div class="card"><b>Tài khoản đăng nhập</b><p class="mu">Mỗi khoa một tài khoản (tên khoa). Biểu tổng xem không cần đăng nhập. Mật khẩu mặc định là 123. Nếu khoa quên mật khẩu, bấm "Đặt lại về 123".</p>
-  ${wards.map(w=>`<div class="log"><span>${esc(w.name)}</span><button class="sm ${pend==="rs"+w.id?"ask":""}" onclick="resetPw('${w.id}')">${pend==="rs"+w.id?"Chắc chắn?":"Đặt lại về 123"}</button></div>`).join("")}</div>
+  <div class="card"><b>Tài khoản đăng nhập</b><p class="mu">Mỗi khoa một tài khoản (tên khoa). Biểu tổng xem không cần đăng nhập. Mật khẩu mặc định là 123. Nếu khoa hoặc quản trị quên mật khẩu, bấm "Đặt lại về 123".</p>
+  ${[{id:"admin",name:"Quản trị (admin)"},...wards].map(w=>`<div class="log"><span>${esc(w.name)}</span><button class="sm ${pend==="rs"+w.id?"ask":""}" onclick="resetPw('${w.id}')">${pend==="rs"+w.id?"Chắc chắn?":"Đặt lại về 123"}</button></div>`).join("")}</div>
   <div class="card"><b>Chốt số liệu cũ</b><p class="mu">Gộp lịch sử cũ vào số bệnh nhân ban đầu của từng khoa để ứng dụng nhẹ, nhanh và đỡ tốn lượt đọc. Số đang điều trị hiện tại không đổi. Chi tiết theo ngày đến ngày chốt sẽ không còn xem được; ứng dụng tự tải file CSV sao lưu trước khi dọn.</p>
   <p class="mu">${archDay?"Đã chốt đến hết ngày "+vnDate(archDay)+". ":"Chưa chốt lần nào. "}Đang lưu ${events.length} dòng nhập.</p>
   <label>Chốt đến hết ngày (cách hôm nay ít nhất 15 ngày)</label><input id="ad" type="date" style="width:100%" max="${addDays(today(),-15)}" value="${archSel||addDays(today(),-30)}" onchange="archSel=this.value">
@@ -303,7 +309,7 @@ async function delEv(id){if(!ask(id))return;try{await db.doc("events/v"+Date.now
 function makeCloudDb(PID,KEY){
   const base=`https://firestore.googleapis.com/v1/projects/${PID}/databases/(default)/documents`;
   const K="key="+encodeURIComponent(KEY);
-  let W={},EV={},ver=null,lastTs=0,ready=false,PIN="",PK="",ARCH="",onData=()=>{};
+  let W={},EV={},ver=null,lastTs=0,ready=false,PIN="",PK="",AD="",ARCH="",onData=()=>{};
   const sd=t=>{const x=new Date((t||0)-27000000);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
   const enc=v=>typeof v==="number"?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):{stringValue:String(v)};
   const encO=o=>{const f={};for(const k in o)f[k]=enc(o[k]);return f};
@@ -321,10 +327,10 @@ function makeCloudDb(PID,KEY){
     const voided=new Set(all.filter(e=>e.type==="void").map(e=>e.ref));
     const ev=all.filter(e=>e.type!=="void"&&!voided.has(e.id)&&(!ARCH||e.day>ARCH));
     const ws=Object.entries(W).map(([id,d])=>({id,...d})).sort((a,b)=>(a.ts||0)-(b.ts||0));
-    onData(ws,ev,PIN,ARCH,PK)}
+    onData(ws,ev,PIN,ARCH,PK,AD)}
   async function pull(full){
     let m;try{m=await api("GET",metaUrl())}catch(e){if(e.status===404)m={fields:{}};else throw e}
-    const f=m.fields||{},v=f.ver?f.ver.stringValue:"";PIN=f.pin?f.pin.stringValue:"";ARCH=f.archivedTo?f.archivedTo.stringValue:"";PK=f.pkpw?f.pkpw.stringValue:"";
+    const f=m.fields||{},v=f.ver?f.ver.stringValue:"";PIN=f.pin?f.pin.stringValue:"";ARCH=f.archivedTo?f.archivedTo.stringValue:"";PK=f.pkpw?f.pkpw.stringValue:"";AD=f.adpw?f.adpw.stringValue:"";
     if(!full&&ready&&v===ver)return;
     const wf=(f.wards&&f.wards.mapValue&&f.wards.mapValue.fields)||{},w={};
     for(const id in wf)w[id]=dec(wf[id].mapValue.fields||{});
@@ -355,6 +361,7 @@ function makeCloudDb(PID,KEY){
         await api("POST",`${base}:commit?${K}`,{writes:ch.map(([id])=>({delete:`projects/${PID}/databases/(default)/documents/events/${id}`}))});
         ch.forEach(([id])=>delete EV[id])}
       emit();return{n:old.length}},
+    async setAd(h){await writeMeta({adpw:{stringValue:h}},["adpw"]);AD=h;emit()},
     async setPk(h){await writeMeta({pkpw:{stringValue:h}},["pkpw"]);PK=h;emit()},
     async setPin(h){await writeMeta({pin:{stringValue:h}},["pin"]);PIN=h;emit()},
     async start(){await pull();setInterval(()=>{if(!document.hidden)pull().catch(()=>{})},45000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull().catch(()=>{})})},
@@ -381,8 +388,8 @@ function saveCfg(){const p=$("cp").value.trim(),k=$("ck").value.trim();if(!p||!k
   const cfg=getCfg();if(!cfg){ready=true;showSetup();return}
   try{
     const d=makeCloudDb(cfg.p,cfg.k);
-    db={doc:p=>d.doc(p),setPin:h=>d.setPin(h),setPk:h=>d.setPk(h),refresh:()=>d.refresh(),archive:(x,f)=>d.archive(x,f)};
-    d.onData((w,e,p,ar,pk)=>{wards=w;events=e;pinHash=p||"";archDay=ar||"";pkHash=pk||"";ready=true;if(!/INPUT|SELECT/.test((document.activeElement||{}).tagName||""))render()});
+    db={doc:p=>d.doc(p),setPin:h=>d.setPin(h),setPk:h=>d.setPk(h),setAd:h=>d.setAd(h),refresh:()=>d.refresh(),archive:(x,f)=>d.archive(x,f)};
+    d.onData((w,e,p,ar,pk,ad)=>{wards=w;events=e;pinHash=p||"";archDay=ar||"";pkHash=pk||"";adHash=ad||"";ready=true;if(!/INPUT|SELECT/.test((document.activeElement||{}).tagName||""))render()});
     await d.start();
   }catch(e){ready=true;showSetup(e.message)}
 })();
