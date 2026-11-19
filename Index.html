@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Theo dõi bệnh nhân nội trú</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#1b2733;--mu:#667685;--bd:#dde3e9;--pri:#0b7a75;--in:#1565c0;--out:#c2571a;--bad:#c62828;--ok:#2e7d32;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11171c;--card:#1a232b;--tx:#e6edf3;--mu:#8fa0ae;--bd:#2c3945;--pri:#3cc4bc;--in:#64b5f6;--out:#ffa264;--bad:#ef7a7a;--ok:#7cd281;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11171c;--card:#1a232b;--tx:#e6edf3;--mu:#8fa0ae;--bd:#2c3945;--pri:#3cc4bc;--in:#64b5f6;--out:#ffa264;--bad:#ef7a7a;--ok:#7cd281;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 14px 0}h1{font-size:18px;margin:0 0 10px}
+nav{display:flex;gap:6px;padding:0 14px 10px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
+nav button{flex:1 1 0;min-width:0;padding:10px 4px;line-height:1.25;overflow-wrap:break-word;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font-size:14px;font-weight:600}
+nav button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+main{padding:0 14px 40px;max-width:1280px;margin:auto}
+.card:not(.wide){max-width:760px;margin-left:auto;margin-right:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input{font:inherit;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);min-width:0}
+select{width:100%}
+label{font-size:13px;color:var(--mu);display:block;margin:8px 0 4px}
+.step{display:flex;gap:8px;align-items:center;margin:8px 0}
+.step button{width:56px;height:56px;font-size:28px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+.step input{flex:1;height:56px;text-align:center;font-size:28px;font-weight:700}
+.go{width:100%;padding:15px;font-size:17px;font-weight:700;border:0;border-radius:12px;color:#fff;margin-top:6px}
+.go.in{background:var(--in)}.go.out{background:var(--out)}.go.pri{background:var(--pri)}.go.in,.go.out,.go.pri{color:#fff}
+.sm.ask,.log button.ask{background:var(--bad);color:#fff;border-color:var(--bad)}
+#toast{position:fixed;left:14px;right:14px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;padding:12px 14px;border-radius:10px;z-index:20;display:none;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.stat{background:var(--bg);border-radius:10px;padding:10px;text-align:center}
+.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:var(--mu)}
+.bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri)}
+.bar.full i{background:var(--bad)}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{white-space:nowrap}th{white-space:normal;line-height:1.25}
+th,td{padding:9px 8px;border:1px solid var(--gd,#a9b4bf);text-align:center}
+:root[data-theme="dark"] table{--gd:#3e4c59}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) table{--gd:#3e4c59}}
+td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}th:first-child{position:sticky;left:0}tfoot td:first-child{background:var(--bg)}
+th{font-size:12px;color:var(--tx);font-weight:800;text-transform:uppercase;text-align:center;vertical-align:middle;background:var(--bg)}
+tfoot td{font-weight:800;border-top:2px solid var(--tx);background:var(--bg)}
+.bad{color:var(--bad);font-weight:700}.ok{color:var(--ok)}.in{color:var(--in)}.out{color:var(--out)}
+.log{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:14px}
+.log button,.sm{border:1px solid var(--bd);background:var(--bg);color:var(--mu);border-radius:8px;padding:6px 10px;font-size:13px}
+.mu{color:var(--mu);font-size:13px}.msg{padding:30px 10px;text-align:center;color:var(--mu)}
+.grid2{display:grid;grid-template-columns:1fr 90px 90px auto;gap:6px;align-items:center;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h1>🏥 Theo dõi bệnh nhân nội trú</h1><div class="row" style="gap:6px;justify-content:flex-end"><span id="who"></span><button class="sm" onclick="refreshNow()">↻ Làm mới</button></div></header>
+<nav id="nav"></nav>
+<div id="toast"></div>
+<main id="app"><div class="msg">Đang tải dữ liệu…</div></main>
+<script>
+const CFG={p:"benhviendakhoatanuyen",k:"AIzaSyDvPKeRtt-t9_FiTOs__wwi2axK8S0EooQ"}; // co the dien san projectId (p) va apiKey (k) tai day
+const TABS=[["sum","Tổng hợp"],["pk","Bệnh nhân vào viện"],["khoa","Bệnh nhân ra viện"],["ct","Bệnh nhân chuyển tỉnh"],["xf","Chuyển khoa"],["day","Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày"],["set","Cài đặt"]];
+let tab="sum",wards=[],events=[],db=null,ready=false,selK="",selP="",qty={pk:1,khoa:1,xf:1,ct:1},xFrom="",xTo="";
+const $=id=>document.getElementById(id);
+let pend="",tt,pinHash="",unlocked=false,selDay="",archDay="",archSel="",actual={},when={pk:"",khoa:"",xf:"",ct:""},editId="",editN="",editA="",me=loadMe(),pkHash="",adHash="",selA="";
+const isAd=()=>!!me&&me.t==="admin";
+const curW=()=>isAd()?(wards.find(w=>w.id===selA)?selA:(selA=(wards[0]||{}).id)):me.id;
+const wardHead=r=>isAd()?`<label>Khoa (quản trị chọn khoa)</label><select onchange="selA=this.value;render()">${opts(r.id)}</select>`:`<p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>`;
+const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const addDays=(s,n)=>{const[y,m,d]=s.split("-").map(Number);return ymd(new Date(y,m-1,d+n))};
+const vnDate=s=>s.split("-").reverse().join("/");
+const isTruc=ts=>{const d=new Date(ts),m=d.getHours()*60+d.getMinutes();return m<450||m>=1020};
+function censusAt(w,d){let c=w.base||0;events.forEach(e=>{if(e.day>d)return;if(e.type==="xfer"){if(e.ward===w.id)c-=e.n;if(e.to===w.id)c+=e.n}else if(e.ward===w.id)c+=e.type==="in"?e.n:-e.n});return Math.max(0,c)}
+function renderXf(a,rows){
+  if(wards.length<2){a.innerHTML=`<div class="card msg">Cần có ít nhất 2 khoa để chuyển khoa.</div>`;return}
+  xFrom=curW();
+  if(xTo===xFrom||!wards.find(w=>w.id===xTo))xTo=wards.find(w=>w.id!==xFrom).id;
+  const f=rows.find(r=>r.id===xFrom),g=rows.find(r=>r.id===xTo);
+  const nm=id=>(wards.find(w=>w.id===id)||{name:"?"}).name;
+  const l=events.filter(e=>e.type==="xfer"&&e.day===today()).sort((x,y)=>y.ts-x.ts).slice(0,15);
+  a.innerHTML=`<div class="card"><b>Chuyển bệnh nhân giữa các khoa</b><p class="mu">Chuyển khoa không tính là ra viện hay nhập viện mới.</p>
+  <label>Chuyển từ khoa</label>${isAd()?`<select onchange="selA=this.value;render()">${opts(xFrom)}</select>`:`<p style="font-size:17px;margin:8px 0"><b>${esc(f.name)}</b></p>`}
+  <label>Chuyển đến khoa</label><select onchange="xTo=this.value;render()">${opts(xTo,xFrom)}</select>
+  <div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><b>${f.cur}</b><span>Đang ĐT: ${esc(f.name)}</span></div><div class="stat"><b>${g.cur}</b><span>Đang ĐT: ${esc(g.name)}</span></div></div>
+  <label>Số bệnh nhân chuyển</label>${stepper("xf")}${whenPicker("xf")}<button class="go pri" onclick="addXf()">⇄ Chuyển khoa</button></div>
+  ${logList("xfer",xFrom)}`}
+async function addXf(){
+  const n=num($("q_xf").value);if(!n||!xFrom||!xTo||xFrom===xTo)return;const at=getWhen("xf");if(!at)return;
+  const r=calc().find(x=>x.id===xFrom);
+  if(r&&n>r.cur&&!ask("xf"+xFrom)){toast(`Số chuyển (${n}) lớn hơn số đang điều trị của khoa (${r.cur}). Bấm lần nữa để vẫn ghi nhận.`);return}
+  try{await db.doc("events/e"+Date.now()+Math.floor(Math.random()*1000)).set({ward:xFrom,to:xTo,type:"xfer",n,ts:Date.now(),at,day:repDay(at)});qty.xf=1;when.xf="";render()}catch(e){alert("Lỗi lưu: "+(e.message||e.code))}
+}
+async function setActualAll(){
+  const rows=calc();let n=0;
+  try{for(const r of rows){const el=$("t_"+r.id);if(!el||el.value==="")continue;const v=parseInt(el.value);
+      if(isNaN(v)||v<0){toast("Số không hợp lệ ở "+r.name);return}
+      await db.doc("wards/"+r.id).update({base:v-(r.inA-r.outA+r.xIn-r.xOut)});n++}
+    actual={};toast(n?"Đã đặt lại số đang điều trị cho "+n+" khoa":"Chưa nhập số nào");render()}catch(e){toast("Lỗi: "+e.message)}}
+function refreshNow(){if(!db||!db.refresh)return;db.refresh().then(()=>toast("Đã cập nhật")).catch(e=>toast(e.message))}
+function csvDown(rows,day){
+  const nm=id=>(wards.find(w=>w.id===id)||{name:id||""}).name,q=v=>'"'+String(v).replace(/"/g,'""')+'"',ty={in:"Vào viện",out:"Ra viện",tinh:"Chuyển tỉnh",xfer:"Chuyển khoa"};
+  const lines=["Ngày,Giờ,Loại,Khoa,Khoa chuyển đến,Số lượng"].concat(rows.sort((x,y)=>x.ts-y.ts).map(e=>[e.day,hm(e.ts),ty[e.type]||e.type,nm(e.ward),e.to?nm(e.to):"",e.n].map(q).join(",")));
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}));a.download="sao-luu-den-"+day+".csv";document.body.appendChild(a);a.click();a.remove()}
+async function doArchive(){
+  const x=$("ad").value,mx=addDays(today(),-15);
+  if(!x)return toast("Chọn ngày chốt");
+  if(x>mx)return toast("Ngày chốt phải cách hôm nay ít nhất 15 ngày");
+  if(archDay&&x<=archDay)return toast("Ngày chốt phải sau ngày đã chốt trước ("+vnDate(archDay)+")");
+  archSel=x;
+  if(!ask("archive")){toast("Bấm lần nữa để xác nhận. Hãy chắc chắn không ai đang nhập.");return}
+  try{toast("Đang chốt số liệu, vui lòng chờ…");const r=await db.archive(x,rows=>csvDown(rows,x));archSel="";toast("Đã chốt đến "+vnDate(x)+", dọn "+r.n+" dòng cũ. File sao lưu đã được tải về.");render()}catch(e){toast("Lỗi: "+e.message)}}
+function renderDay(a){
+  const t=today(),d=selDay||t,ev=events.filter(e=>e.day===d);
+  if(archDay&&d<=archDay){a.innerHTML=`<div class="card"><b>Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày</b><div class="row" style="margin-top:8px"><input type="date" value="${d}" max="${t}" style="flex:1" onchange="selDay=this.value||'';render()"><button class="sm" onclick="selDay='';render()">Hôm nay</button></div></div><div class="card msg">Số liệu đến hết ngày ${vnDate(archDay)} đã được chốt, không còn chi tiết theo ngày. Hãy chọn ngày sau đó.</div>`;return}
+  const sum=(l,ty)=>l.filter(e=>e.type===ty).reduce((s,e)=>s+e.n,0),sumO=l=>sum(l,"out")+sum(l,"tinh");
+  const rows=wards.map(w=>{const l=ev.filter(e=>e.ward===w.id);return{name:w.name,i:sum(l,"in"),tr:l.filter(e=>e.type==="in"&&isTruc(e.ts)).reduce((s,e)=>s+e.n,0),o:sumO(l),ct:sum(l,"tinh"),xo:sum(l,"xfer"),xi:ev.filter(e=>e.type==="xfer"&&e.to===w.id).reduce((s,e)=>s+e.n,0),c:censusAt(w,d)}});
+  const T=rows.reduce((s,r)=>({i:s.i+r.i,tr:s.tr+r.tr,o:s.o+r.o,ct:s.ct+r.ct,xi:s.xi+r.xi,xo:s.xo+r.xo,c:s.c+r.c}),{i:0,tr:0,o:0,ct:0,xi:0,xo:0,c:0});
+  const days=[];for(let k=0;k<14;k++)days.push(addDays(t,-k));
+  const hist=days.map(x=>{const l=events.filter(e=>e.day===x);return{day:x,i:sum(l,"in"),o:sumO(l),c:wards.reduce((s,w)=>s+censusAt(w,x),0)}});
+  a.innerHTML=`<div class="card"><b>Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày</b>
+  <div class="row" style="margin-top:8px"><input type="date" id="dd" value="${d}" max="${t}" style="flex:1" onchange="selDay=this.value||'';render()"><button class="sm" onclick="selDay='';render()">Hôm nay</button></div></div>
+  <div class="card wrap wide"><b>Ngày ${vnDate(d)}</b><table style="margin-top:6px"><thead><tr><th>Khoa</th><th>Vào trong ngày<br>7h30–16h59</th><th>Vào kíp trực<br>17h00–7h29</th><th>Ra viện</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển đến</th><th>Chuyển đi</th><th>BN hiện có cuối ngày</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="in">+${r.i-r.tr}</td><td class="in">+${r.tr}</td><td class="out">−${r.o}</td><td class="out">${r.ct}</td><td class="in">+${r.xi}</td><td class="out">−${r.xo}</td><td>${r.c}</td></tr>`).join("")}
+  </tbody><tfoot><tr><td>TỔNG</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td><td class="in">+${T.xi}</td><td class="out">−${T.xo}</td><td>${T.c}</td></tr></tfoot></table></div>
+  <div class="card wrap"><b>14 ngày gần nhất</b><p class="mu">Bấm vào một ngày để xem chi tiết theo khoa.</p><table><thead><tr><th>Ngày</th><th>Vào viện (cả 2 kíp)</th><th>Ra viện (gồm chuyển tỉnh)</th><th>BN hiện có cuối ngày</th></tr></thead><tbody>
+  ${hist.map(h=>`<tr onclick="selDay='${h.day}';render();scrollTo(0,0)" style="cursor:pointer${h.day===d?";font-weight:700":""}"><td>${vnDate(h.day)}</td><td class="in">+${h.i}</td><td class="out">−${h.o}</td><td>${h.c}</td></tr>`).join("")}
+  </tbody></table></div>`}
+function h53(s){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)}
+const hp=s=>h53("bv-pin:"+s);
+function go(k){if(k!=="set")unlocked=false;tab=k;render()}
+function renderLock(a){
+  a.innerHTML=pinHash?`<div class="card"><b>🔒 Cài đặt đã khóa</b><p class="mu">Chỉ người quản trị được sửa khoa và giường kế hoạch.</p><label>Mật khẩu</label><input id="pw" type="password" style="width:100%" onkeydown="if(event.key==='Enter')tryPin()"><button class="go pri" onclick="tryPin()">Mở khóa</button></div>`
+  :`<div class="card"><b>Tạo mật khẩu quản trị</b><p class="mu">Chưa có mật khẩu. Người đầu tiên tạo sẽ là quản trị, hãy nhớ mật khẩu này.</p><label>Mật khẩu (tối thiểu 4 ký tự)</label><input id="pw" type="password" style="width:100%"><label>Nhập lại</label><input id="pw2" type="password" style="width:100%"><button class="go pri" onclick="makePin()">Tạo mật khẩu</button></div>`}
+function tryPin(){if(hp($("pw").value)===pinHash){unlocked=true;render()}else{toast("Sai mật khẩu");$("pw").value=""}}
+async function makePin(){const a=$("pw").value,b=$("pw2").value;if(a.length<4)return toast("Mật khẩu tối thiểu 4 ký tự");if(a!==b)return toast("Hai ô không khớp");try{await db.setPin(hp(a));unlocked=true;render()}catch(e){toast("Lỗi lưu: "+e.message)}}
+async function changePin(){const a=$("np").value;if(a.length<4)return toast("Mật khẩu tối thiểu 4 ký tự");try{await db.setPin(hp(a));$("np").value="";toast("Đã đổi mật khẩu")}catch(e){toast("Lỗi: "+e.message)}}
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",3500)}
+window.alert=toast;
+function ask(id){if(pend===id){pend="";return true}pend=id;render();setTimeout(()=>{if(pend===id){pend="";render()}},4000);return false}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today=()=>{const d=new Date(Date.now()-27000000);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const hm=t=>new Date(t).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+
+function calc(){
+  const m={};
+  wards.forEach(w=>m[w.id]={...w,inT:0,inTr:0,outT:0,inA:0,outA:0,xIn:0,xOut:0,ctT:0,xInT:0,xOutT:0});
+  events.forEach(e=>{
+    const t=e.day===today();
+    if(e.type==="xfer"){const f=m[e.ward],g=m[e.to];if(f){f.xOut+=e.n;if(t)f.xOutT+=e.n}if(g){g.xIn+=e.n;if(t)g.xInT+=e.n}return}
+    const r=m[e.ward];if(!r)return;
+    if(e.type==="in"){r.inA+=e.n;if(t){r.inT+=e.n;if(isTruc(e.ts))r.inTr+=e.n}}else{r.outA+=e.n;if(t){r.outT+=e.n;if(e.type==="tinh")r.ctT+=e.n}}});
+  return Object.values(m).map(r=>({...r,cur:Math.max(0,(r.base||0)+r.inA-r.outA+r.xIn-r.xOut)}));
+}
+function allowed(){return me?["sum","pk","khoa","ct","xf","day","set"]:["sum","day","set"]}
+function nav(){
+  if(tab!=="acc"&&tab!=="login"&&!allowed().includes(tab))tab=allowed()[0];
+  $("nav").innerHTML=TABS.filter(([k])=>allowed().includes(k)).map(([k,t])=>`<button class="${k===tab?"on":""}" onclick="go('${k}')">${t}</button>`).join("");
+}
+function stepper(k){
+  return `<div class="step"><button onclick="chg('${k}',-1)">−</button><input id="q_${k}" type="number" inputmode="numeric" min="1" value="${qty[k]}" oninput="qty['${k}']=Math.max(1,parseInt(this.value)||1)"><button onclick="chg('${k}',1)">+</button></div>`;
+}
+function chg(k,d){qty[k]=Math.max(1,(parseInt($("q_"+k).value)||1)+d);$("q_"+k).value=qty[k]}
+function opts(sel,ex){return wards.filter(w=>w.id!==ex).map(w=>`<option value="${w.id}" ${w.id===sel?"selected":""}>${esc(w.name)}</option>`).join("")}
+function wardCard(r){
+  const pct=r.beds?Math.round(r.cur/r.beds*100):0;
+  return `<div class="stats"><div class="stat"><b>${r.cur}/${r.beds||0}</b><span>Đang điều trị / giường KH</span></div>
+  <div class="stat"><b class="${r.beds-r.cur<0?"bad":"ok"}">${(r.beds||0)-r.cur}</b><span>Giường trống</span></div>
+  <div class="stat"><b>${pct}%</b><span>Công suất</span></div></div>
+  <div class="bar ${pct>100?"full":""}"><i style="width:${Math.min(100,pct)}%"></i></div>
+  <p class="mu">Hôm nay: <span class="in">+${r.inT} vào</span> · <span class="out">−${r.outT} ra</span>${r.ctT?` (trong đó ${r.ctT} chuyển tỉnh)`:""}</p>`;
+}
+function loadMe(){try{return JSON.parse(localStorage.getItem("me")||"null")}catch(e){return null}}
+function saveMe(){try{if(me)localStorage.setItem("me",JSON.stringify(me));else localStorage.removeItem("me")}catch(e){}}
+const myWard=()=>me&&me.t==="ward"?wards.find(w=>w.id===me.id):null;
+const isDefPw=()=>me.t==="admin"?(!adHash||adHash===hp("123")):(()=>{const w=myWard();return !w||!w.pw||w.pw===hp("123")})();
+function logout(){me=null;saveMe();tab="sum";render()}
+function whoBar(){
+  if(!me){$("who").innerHTML=tab==="login"?"":`<button class="sm" style="background:var(--pri);color:#fff;border-color:var(--pri)" onclick="tab='login';render()">Đăng nhập</button>`;return}
+  const nm=isAd()?"Quản trị (admin)":(myWard()||{name:"?"}).name;
+  $("who").innerHTML=`<span class="mu"><b>${esc(nm)}</b></span> <button class="sm" style="${isDefPw()?"background:var(--bad);color:#fff;border-color:var(--bad)":""}" onclick="tab='acc';render()">Đổi mật khẩu</button> <button class="sm" onclick="logout()">Đăng xuất</button>`}
+function renderLogin(a){
+  a.innerHTML=`<div class="card"><b>Đăng nhập</b><p class="mu">Các khoa và quản trị đăng nhập để nhập số liệu. Xem biểu tổng thì không cần đăng nhập. Mật khẩu mặc định là <b>123</b>, hãy đổi sau khi đăng nhập.</p>
+  <label>Tài khoản</label><select id="lu"><option value="admin">Quản trị (admin)</option>${wards.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("")}</select>
+  <label>Mật khẩu</label><input id="lp" type="password" style="width:100%" onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="go pri" onclick="doLogin()">Đăng nhập</button><button class="sm" style="margin-top:8px" onclick="tab='sum';render()">← Quay lại biểu tổng</button></div>`}
+function doLogin(){
+  const u=$("lu").value,pw=hp($("lp").value),w=wards.find(x=>x.id===u);
+  const ok=u==="admin"?pw===(adHash||hp("123")):!!w&&pw===(w.pw||hp("123"));
+  if(!ok){toast("Sai mật khẩu");$("lp").value="";return}
+  me=u==="admin"?{t:"admin"}:{t:"ward",id:u};saveMe();tab=u==="admin"?"sum":"pk";render()}
+function renderAcc(a){
+  a.innerHTML=`<div class="card"><b>Đổi mật khẩu</b>${isDefPw()?`<p class="bad">Bạn đang dùng mật khẩu mặc định 123, hãy đổi ngay.</p>`:""}
+  <label>Mật khẩu hiện tại</label><input id="o1" type="password" style="width:100%">
+  <label>Mật khẩu mới (tối thiểu 4 ký tự)</label><input id="o2" type="password" style="width:100%">
+  <label>Nhập lại mật khẩu mới</label><input id="o3" type="password" style="width:100%">
+  <button class="go pri" onclick="changeMyPw()">Đổi mật khẩu</button></div>`}
+async function changeMyPw(){
+  const cur=hp($("o1").value),n1=$("o2").value,n2=$("o3").value,w=myWard();
+  const curOk=me.t==="admin"?cur===(adHash||hp("123")):!!w&&cur===(w.pw||hp("123"));
+  if(!curOk)return toast("Mật khẩu hiện tại không đúng");
+  if(n1.length<4)return toast("Mật khẩu mới tối thiểu 4 ký tự");
+  if(n1!==n2)return toast("Hai ô mật khẩu mới không khớp");
+  try{if(me.t==="admin")await db.setAd(hp(n1));else await db.doc("wards/"+me.id).update({pw:hp(n1)});toast("Đã đổi mật khẩu");tab=allowed()[0];render()}catch(e){toast("Lỗi: "+e.message)}}
+async function resetPw(id){
+  if(!ask("rs"+id))return;
+  try{if(id==="admin")await db.setAd(hp("123"));else await db.doc("wards/"+id).update({pw:hp("123")});toast("Đã đặt lại mật khẩu về 123");render()}catch(e){toast("Lỗi: "+e.message)}}
+const repDay=ts=>ymd(new Date(ts-27000000));
+const dtl=t=>{const d=new Date(t);return ymd(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const minAt=()=>{const[y,m,d]=addDays(today(),-3).split("-").map(Number);return new Date(y,m-1,d,7,30).getTime()};
+function getWhen(k){
+  const v=when[k]||"";if(!v)return Date.now();
+  const ts=new Date(v).getTime();
+  if(!ts||ts>Date.now()+60000||ts<minAt()){toast("Thời gian không hợp lệ (chỉ nhập bù tối đa 3 ngày trước, không chọn giờ tương lai)");return 0}
+  return ts}
+function setWhenMode(k,m){when[k]=m==="custom"?dtl(Date.now()):"";render()}
+function whenPicker(k){
+  const v=when[k]||"";
+  let h=`<label>Thời điểm ghi nhận</label><select onchange="setWhenMode('${k}',this.value)"><option value="now"${v?"":" selected"}>Bây giờ</option><option value="custom"${v?" selected":""}>Chọn ngày giờ khác (nhập bù, tối đa 3 ngày trước)</option></select>`;
+  if(v){const ts=new Date(v).getTime();
+    h+=`<input type="datetime-local" value="${v}" min="${dtl(minAt())}" max="${dtl(Date.now())}" style="width:100%;margin-top:6px" onchange="when['${k}']=this.value;render()">`;
+    if(ts)h+=`<p class="mu">→ ${isTruc(ts)?"Kíp trực (17h00–7h29)":"Giờ hành chính (7h30–16h59)"} · ngày báo cáo ${vnDate(repDay(ts))}</p>`}
+  return h}
+function startEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editId=id;editN=String(e.n);editA=dtl(e.ts);render()}
+async function saveEdit(id){
+  const e=events.find(x=>x.id===id);if(!e)return;
+  const n=num(editN),a=new Date(editA).getTime();
+  if(!n)return toast("Số lượng phải từ 1 trở lên");
+  if(!a||a>Date.now()+60000||a<minAt())return toast("Thời gian không hợp lệ (tối đa 3 ngày trước, không chọn giờ tương lai)");
+  const d={ward:e.ward,type:e.type,n,ts:Date.now(),at:a,day:repDay(a)};if(e.to)d.to=e.to;
+  try{await db.doc("events/"+id).set(d);editId="";toast("Đã lưu thay đổi");render()}catch(err){toast("Lỗi: "+err.message)}}
+function logList(type,ward){
+  const minDay=addDays(today(),-3),nm=id=>(wards.find(w=>w.id===id)||{name:"?"}).name;
+  const l=events.filter(e=>e.type===type&&(!ward||e.ward===ward)&&e.day>=minDay).sort((x,y)=>y.ts-x.ts).slice(0,60);
+  const sign=type==="in"?"+":type==="out"||type==="tinh"?"−":"",cls=type==="tinh"?"out":type;
+  const row=e=>{
+    const who=type==="xfer"?esc(nm(e.ward))+" → "+esc(nm(e.to)):esc(nm(e.ward));
+    const tag=type==="in"?" · "+(isTruc(e.ts)?"trực":"HC"):"";
+    const head=`<span>${vnDate(ymd(new Date(e.ts))).slice(0,5)} ${hm(e.ts)} · ${who}${tag} · <b class="${cls}">${sign}${e.n}</b></span>`;
+    if(editId===e.id)return `<div class="log" style="flex-wrap:wrap;gap:6px">${head}<div class="row" style="width:100%;flex-wrap:nowrap"><input type="number" inputmode="numeric" min="1" value="${esc(editN)}" style="width:80px" oninput="editN=this.value"><input type="datetime-local" value="${editA}" min="${dtl(minAt())}" max="${dtl(Date.now())}" style="flex:1" onchange="editA=this.value"><button class="sm" onclick="saveEdit('${e.id}')">Lưu</button><button class="sm" onclick="editId='';render()">Đóng</button></div></div>`;
+    return `<div class="log">${head}<span class="row" style="gap:6px;flex-wrap:nowrap"><button class="sm" onclick="startEdit('${e.id}')">Sửa</button><button class="${pend===e.id?"ask":""}" onclick="delEv('${e.id}')">${pend===e.id?"Chắc chắn hủy?":"Hủy"}</button></span></div>`};
+  return `<div class="card"><b>Đã nhập (hôm nay và 3 ngày trước)</b><p class="mu">Bấm "Sửa" để đổi số lượng hoặc giờ, "Hủy" để xóa lần nhập. HC = giờ hành chính, trực = kíp trực.</p>${l.length?l.map(row).join(""):`<p class="mu">Chưa có.</p>`}</div>`;
+}
+function render(){
+  nav();const a=$("app");
+  if(!ready){a.innerHTML=`<div class="msg">Đang tải dữ liệu…</div>`;return}
+  if(!db){a.innerHTML=`<div class="msg">Không kết nối được cơ sở dữ liệu. Kiểm tra internet và cấu hình.</div>`;return}
+  if(me&&!isAd()&&(me.t!=="ward"||!wards.find(w=>w.id===me.id))){logout();return}
+  whoBar();
+  if(tab==="login"){if(me){tab=allowed()[0];return render()}return renderLogin(a)}
+  if(tab==="acc"){if(!me){tab="sum";return render()}return renderAcc(a)}
+  const rows=calc();
+  if(tab==="set"){return unlocked||isAd()?renderSet(a):renderLock(a)}
+  if(!wards.length){a.innerHTML=`<div class="card msg">Chưa có khoa nào. Vào tab <b>Cài đặt</b> để thêm khoa và số giường kế hoạch.</div>`;return}
+  if(tab==="day")return renderDay(a);
+  if(tab==="xf")return renderXf(a,rows);
+  if(tab==="sum"){
+    const T=rows.reduce((s,r)=>({b:s.b+(+r.beds||0),c:s.c+r.cur,i:s.i+r.inT,o:s.o+r.outT,ol:s.ol+censusAt(r,addDays(today(),-1)),tr:s.tr+r.inTr,ct:s.ct+r.ctT,xi:s.xi+r.xInT,xo:s.xo+r.xOutT}),{b:0,c:0,i:0,o:0,ol:0,tr:0,ct:0,xi:0,xo:0});
+    const pct=T.b?Math.round(T.c/T.b*100):0;
+    a.innerHTML=`<div class="card wide"><div class="stats"><div class="stat"><b>${T.c}</b><span>Đang điều trị</span></div><div class="stat"><b>${T.b}</b><span>Giường KH</span></div><div class="stat"><b class="${T.b-T.c<0?"bad":"ok"}">${T.b-T.c}</b><span>Giường trống</span></div></div>
+    <div class="bar ${pct>100?"full":""}"><i style="width:${Math.min(100,pct)}%"></i></div>
+    <p class="mu">Hôm nay (${today().split("-").reverse().join("/")}): <span class="in">+${T.i} nhập viện</span> (trong đó ${T.tr} vào trực) · <span class="out">−${T.o} ra viện</span> (trong đó ${T.ct} chuyển tỉnh) · ${T.xi} lượt chuyển khoa</p></div>
+    <div class="card wrap wide"><table><thead><tr><th>Khoa</th><th>Giường KH</th><th>BN cũ</th><th>BN hiện có</th><th>Giường trống</th><th>%</th><th>Vào trong ngày<br>7h30–16h59</th><th>Vào kíp trực<br>17h00–7h29</th><th>Ra viện</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển<br>đến</th><th>Chuyển<br>đi</th></tr></thead><tbody>
+    ${rows.map(r=>{const o=censusAt(r,addDays(today(),-1)),t=(+r.beds||0)-r.cur,p=r.beds?Math.round(r.cur/r.beds*100):0;return `<tr><td>${esc(r.name)}</td><td>${r.beds||0}</td><td>${o}</td><td><b>${r.cur}</b></td><td class="${t<0?"bad":""}">${t}</td><td class="${p>100?"bad":""}">${p}%</td><td class="in">+${r.inT-r.inTr}</td><td class="in">+${r.inTr}</td><td class="out">−${r.outT}</td><td class="out">${r.ctT}</td><td class="in">+${r.xInT}</td><td class="out">−${r.xOutT}</td></tr>`}).join("")}
+    </tbody><tfoot><tr><td>TỔNG</td><td>${T.b}</td><td>${T.ol}</td><td>${T.c}</td><td class="${T.b-T.c<0?"bad":""}">${T.b-T.c}</td><td>${pct}%</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td><td class="in">+${T.xi}</td><td class="out">−${T.xo}</td></tr></tfoot></table></div>
+    <p class="mu" style="text-align:center">Số liệu tự cập nhật khi các khoa nhập. "BN cũ" là số bệnh nhân hiện có lúc 7h30 sáng nay (cuối ngày báo cáo hôm trước). Ngày báo cáo tính từ 7h30 đến 7h30 hôm sau. "Vào trong ngày" là bệnh nhân vào 7h30–16h59, "Vào kíp trực" là vào 17h00–7h29 hôm sau. Cột "Ra viện" đã gồm cả bệnh nhân chuyển tỉnh. BN hiện có = BN cũ + Vào trong ngày + Vào kíp trực − Ra viện + Chuyển đến − Chuyển đi.</p>`;
+  }else if(tab==="pk"){
+    selP=curW();const r=rows.find(x=>x.id===selP)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân vào viện: nhập số bệnh nhân VÀO khoa</b>${wardHead(r)}
+    <label>Số bệnh nhân vào</label>${stepper("pk")}${whenPicker("pk")}<button class="go in" onclick="addEv('in','pk',selP)">+ Nhập viện</button></div>
+    <div class="card">${wardCard(r)}</div>${logList("in",selP)}`;
+  }else if(tab==="ct"){
+    selK=curW();const r=rows.find(x=>x.id===selK)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân chuyển tỉnh: nhập số bệnh nhân CHUYỂN TUYẾN TỈNH</b><p class="mu">Bệnh nhân chuyển tỉnh được trừ khỏi số đang điều trị và tính vào cột Ra viện ở bảng tổng hợp.</p>${wardHead(r)}
+    ${wardCard(r)}<label>Số bệnh nhân chuyển tỉnh</label>${stepper("ct")}${whenPicker("ct")}<button class="go out" onclick="addEv('tinh','ct',selK)">↗ Chuyển tỉnh</button></div>${logList("tinh",selK)}`;
+  }else{
+    selK=curW();const r=rows.find(x=>x.id===selK)||rows[0];
+    a.innerHTML=`<div class="card"><b>Bệnh nhân ra viện: nhập số bệnh nhân RA viện</b>${wardHead(r)}
+    ${wardCard(r)}<label>Số bệnh nhân ra viện</label>${stepper("khoa")}${whenPicker("khoa")}<button class="go out" onclick="addEv('out','khoa',selK)">− Cho ra viện</button></div>${logList("out",selK)}`;
+  }
+}
+function renderSet(a){
+  a.innerHTML=`<div class="card"><b>Danh sách khoa</b><p class="mu">Tên khoa · giường kế hoạch · số BN đang nằm lúc bắt đầu theo dõi</p>
+  <div class="grid2 mu"><span>Khoa</span><span>Giường</span><span>BN đầu</span><span></span></div>
+  ${wards.map(w=>`<div class="grid2"><input id="n_${w.id}" value="${esc(w.name)}" onchange="upd('${w.id}')"><input id="b_${w.id}" type="number" inputmode="numeric" value="${w.beds||0}" onchange="upd('${w.id}')"><input id="s_${w.id}" type="number" inputmode="numeric" value="${w.base||0}" onchange="upd('${w.id}')"><button class="sm ${pend===w.id?"ask":""}" onclick="delW('${w.id}')">${pend===w.id?"Chắc chắn?":"Xóa"}</button></div>`).join("")||`<p class="mu">Chưa có khoa.</p>`}</div>
+  <div class="card"><b>Thêm khoa</b><label>Tên khoa</label><input id="nn" style="width:100%" placeholder="VD: Nội tim mạch">
+  <div class="row"><div style="flex:1"><label>Giường kế hoạch</label><input id="nb" type="number" inputmode="numeric" style="width:100%" value="30"></div><div style="flex:1"><label>BN đang nằm hiện tại</label><input id="ns" type="number" inputmode="numeric" style="width:100%" value="0"></div></div>
+  <button class="go pri" onclick="addW()">Thêm khoa</button></div>
+  <div class="card"><b>Đặt lại số đang điều trị thực tế</b><p class="mu">Nhập số bệnh nhân thực tế hiện có của từng khoa (ô nào để trống thì giữ nguyên). Ứng dụng tự tính lại "BN đầu" cho khớp, các lần nhập vào, ra, chuyển khoa đã có vẫn được giữ.</p>
+  ${calc().map(r=>`<div class="grid2" style="grid-template-columns:1fr 80px 90px"><span>${esc(r.name)}</span><span class="mu">Đang: <b>${r.cur}</b></span><input id="t_${r.id}" type="number" inputmode="numeric" min="0" placeholder="Thực tế" value="${actual[r.id]===undefined?"":actual[r.id]}" oninput="actual['${r.id}']=this.value"></div>`).join("")}
+  <button class="go pri" onclick="setActualAll()">Áp dụng số thực tế</button></div>
+  <div class="card"><b>Tài khoản đăng nhập</b><p class="mu">Mỗi khoa một tài khoản (tên khoa). Biểu tổng xem không cần đăng nhập. Mật khẩu mặc định là 123. Nếu khoa hoặc quản trị quên mật khẩu, bấm "Đặt lại về 123".</p>
+  ${[{id:"admin",name:"Quản trị (admin)"},...wards].map(w=>`<div class="log"><span>${esc(w.name)}</span><button class="sm ${pend==="rs"+w.id?"ask":""}" onclick="resetPw('${w.id}')">${pend==="rs"+w.id?"Chắc chắn?":"Đặt lại về 123"}</button></div>`).join("")}</div>
+  <div class="card"><b>Chốt số liệu cũ</b><p class="mu">Gộp lịch sử cũ vào số bệnh nhân ban đầu của từng khoa để ứng dụng nhẹ, nhanh và đỡ tốn lượt đọc. Số đang điều trị hiện tại không đổi. Chi tiết theo ngày đến ngày chốt sẽ không còn xem được; ứng dụng tự tải file CSV sao lưu trước khi dọn.</p>
+  <p class="mu">${archDay?"Đã chốt đến hết ngày "+vnDate(archDay)+". ":"Chưa chốt lần nào. "}Đang lưu ${events.length} dòng nhập.</p>
+  <label>Chốt đến hết ngày (cách hôm nay ít nhất 15 ngày)</label><input id="ad" type="date" style="width:100%" max="${addDays(today(),-15)}" value="${archSel||addDays(today(),-30)}" onchange="archSel=this.value">
+  <button class="go pri ${pend==="archive"?"ask":""}" style="${pend==="archive"?"background:var(--bad)":""}" onclick="doArchive()">${pend==="archive"?"Chắc chắn chốt?":"Chốt số liệu"}</button></div>
+  <div class="card"><b>Mật khẩu quản trị</b><label>Mật khẩu mới</label><input id="np" type="password" style="width:100%"><button class="go pri" onclick="changePin()">Đổi mật khẩu</button><button class="sm" style="margin-top:8px" onclick="unlocked=false;render()">🔒 Khóa lại</button></div>
+  <div class="card"><b>Kết nối đám mây</b><p class="mu">Đổi sang dự án Firebase khác.</p><button class="sm" onclick="localStorage.removeItem('cfg');location.reload()">Đổi cấu hình</button></div>`;
+}
+const num=v=>Math.max(0,parseInt(v)||0);
+async function addW(){const n=$("nn").value.trim();if(!n)return;
+  try{await db.doc("wards/w"+Date.now()).set({name:n,beds:num($("nb").value),base:num($("ns").value),ts:Date.now()})}catch(e){alert("Lỗi lưu: "+(e.message||e.code))}}
+async function upd(id){try{await db.doc("wards/"+id).update({name:$("n_"+id).value.trim()||"Khoa",beds:num($("b_"+id).value),base:num($("s_"+id).value)})}catch(e){alert("Lỗi lưu")}}
+async function delW(id){if(!ask(id))return;try{await db.doc("wards/"+id).delete()}catch(e){alert("Lỗi xóa")}}
+async function addEv(type,k,ward){
+  const n=num($("q_"+k).value);if(!n)return;const at=getWhen(k);if(!at)return;
+  if(type==="out"||type==="tinh"){const r=calc().find(x=>x.id===ward);if(r&&n>r.cur&&!ask("over"+ward)){toast(`Số ${type==="tinh"?"chuyển tỉnh":"ra viện"} (${n}) lớn hơn số đang điều trị (${r.cur}). Bấm lần nữa để vẫn ghi nhận.`);return}}
+  try{await db.doc("events/e"+Date.now()+Math.floor(Math.random()*1000)).set({ward,type,n,ts:Date.now(),at,day:repDay(at)});qty[k]=1;when[k]="";render()}catch(e){alert("Lỗi lưu: "+(e.message||e.code))}
+}
+async function delEv(id){if(!ask(id))return;try{await db.doc("events/v"+Date.now()+Math.floor(Math.random()*1000)).set({type:"void",ref:id,ts:Date.now(),day:today()})}catch(e){alert("Lỗi hủy: "+e.message)}}
+
+
+function makeCloudDb(PID,KEY){
+  const base=`https://firestore.googleapis.com/v1/projects/${PID}/databases/(default)/documents`;
+  const K="key="+encodeURIComponent(KEY);
+  let W={},EV={},ver=null,lastTs=0,ready=false,PIN="",PK="",AD="",ARCH="",onData=()=>{};
+  const sd=t=>{const x=new Date((t||0)-27000000);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+  const enc=v=>typeof v==="number"?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):{stringValue:String(v)};
+  const encO=o=>{const f={};for(const k in o)f[k]=enc(o[k]);return f};
+  const dec=f=>{const o={};for(const k in f){const v=f[k];o[k]=v.integerValue!==undefined?Number(v.integerValue):v.doubleValue!==undefined?v.doubleValue:v.stringValue}return o};
+  async function api(method,url,body){
+    let r;try{r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined})}catch(e){throw new Error("Không có kết nối internet")}
+    if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}const er=new Error("Lỗi đám mây ("+r.status+") "+m);er.status=r.status;throw er}
+    return r.json()}
+  const metaUrl=(paths)=>`${base}/config/meta?${K}`+(paths||[]).map(p=>"&updateMask.fieldPaths="+encodeURIComponent(p)).join("");
+  async function writeMeta(fields,paths){
+    const v=Date.now()+"-"+Math.random().toString(36).slice(2,6);fields.ver={stringValue:v};
+    await api("PATCH",metaUrl([...paths,"ver"]),{fields});ver=v}
+  function emit(){
+    const all=Object.entries(EV).map(([id,d])=>({id,...d,mts:d.ts,ts:d.at||d.ts,day:sd(d.at||d.ts)}));
+    const voided=new Set(all.filter(e=>e.type==="void").map(e=>e.ref));
+    const ev=all.filter(e=>e.type!=="void"&&!voided.has(e.id)&&(!ARCH||e.day>ARCH));
+    const ws=Object.entries(W).map(([id,d])=>({id,...d})).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    onData(ws,ev,PIN,ARCH,PK,AD)}
+  async function pull(full){
+    let m;try{m=await api("GET",metaUrl())}catch(e){if(e.status===404)m={fields:{}};else throw e}
+    const f=m.fields||{},v=f.ver?f.ver.stringValue:"";PIN=f.pin?f.pin.stringValue:"";ARCH=f.archivedTo?f.archivedTo.stringValue:"";PK=f.pkpw?f.pkpw.stringValue:"";AD=f.adpw?f.adpw.stringValue:"";
+    if(!full&&ready&&v===ver)return;
+    const wf=(f.wards&&f.wards.mapValue&&f.wards.mapValue.fields)||{},w={};
+    for(const id in wf)w[id]=dec(wf[id].mapValue.fields||{});
+    const q={structuredQuery:{from:[{collectionId:"events"}],orderBy:[{field:{fieldPath:"ts"}}]}};
+    if(!full&&ready&&lastTs)q.structuredQuery.where={fieldFilter:{field:{fieldPath:"ts"},op:"GREATER_THAN",value:{integerValue:String(lastTs-600000)}}};
+    const rows=await api("POST",`${base}:runQuery?${K}`,q);
+    W=w;
+    rows.forEach(r=>{if(!r.document)return;const id=r.document.name.split("/").pop(),d=dec(r.document.fields||{});EV[id]=d;if(d.ts>lastTs)lastTs=d.ts});
+    ver=v;ready=true;emit()}
+  return{
+    onData:f=>onData=f,
+    refresh:()=>pull(false),
+    async archive(X,onRows){
+      await pull(true);
+      const all=Object.entries(EV),voided=new Set(all.filter(([,e])=>e.type==="void").map(([,e])=>e.ref));
+      const old=all.filter(([,e])=>sd(e.at||e.ts)<=X);
+      const eff=old.filter(([id,e])=>e.type!=="void"&&!voided.has(id)&&(!ARCH||sd(e.at||e.ts)>ARCH));
+      const c={};Object.keys(W).forEach(id=>c[id]=W[id].base||0);
+      eff.forEach(([,e])=>{if(e.type==="xfer"){if(e.ward in c)c[e.ward]-=e.n;if(e.to in c)c[e.to]+=e.n}else if(e.ward in c)c[e.ward]+=e.type==="in"?e.n:-e.n});
+      if(onRows)onRows(eff.map(([,e])=>({...e,ts:e.at||e.ts,day:sd(e.at||e.ts)})));
+      const wf={},paths=["archivedTo"];
+      Object.keys(c).forEach(id=>{wf[id]={mapValue:{fields:{base:{integerValue:String(Math.max(0,c[id]))}}}};paths.push("wards."+id+".base")});
+      const fields={archivedTo:{stringValue:X}};if(paths.length>1)fields.wards={mapValue:{fields:wf}};
+      await writeMeta(fields,paths);
+      Object.keys(c).forEach(id=>{W[id].base=Math.max(0,c[id])});ARCH=X;
+      for(let i=0;i<old.length;i+=400){
+        const ch=old.slice(i,i+400);
+        await api("POST",`${base}:commit?${K}`,{writes:ch.map(([id])=>({delete:`projects/${PID}/databases/(default)/documents/events/${id}`}))});
+        ch.forEach(([id])=>delete EV[id])}
+      emit();return{n:old.length}},
+    async setAd(h){await writeMeta({adpw:{stringValue:h}},["adpw"]);AD=h;emit()},
+    async setPk(h){await writeMeta({pkpw:{stringValue:h}},["pkpw"]);PK=h;emit()},
+    async setPin(h){await writeMeta({pin:{stringValue:h}},["pin"]);PIN=h;emit()},
+    async start(){await pull();setInterval(()=>{if(!document.hidden)pull().catch(()=>{})},45000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull().catch(()=>{})})},
+    doc(p){const[c,id]=p.split("/");return{
+      async set(d){
+        if(c==="wards"){await writeMeta({wards:{mapValue:{fields:{[id]:{mapValue:{fields:encO(d)}}}}}},["wards."+id]);W[id]=d}
+        else{await api("PATCH",`${base}/events/${id}?${K}`,{fields:encO(d)});await writeMeta({},[]);EV[id]=d;if(d.ts>lastTs)lastTs=d.ts}
+        emit()},
+      async update(d){const f=encO(d);await writeMeta({wards:{mapValue:{fields:{[id]:{mapValue:{fields:f}}}}}},Object.keys(d).map(k=>"wards."+id+"."+k));W[id]={...(W[id]||{}),...d};emit()},
+      async delete(){if(c==="wards"){await writeMeta({},["wards."+id]);delete W[id];emit()}}
+    }}
+  }
+}
+function getCfg(){if(CFG.p&&CFG.k)return CFG;try{const c=JSON.parse(localStorage.getItem("cfg")||"null");if(c&&c.p&&c.k)return c}catch(e){}return null}
+function showSetup(err){
+  $("nav").innerHTML="";
+  $("app").innerHTML=`<div class="card"><b>Kết nối cơ sở dữ liệu đám mây (Firebase)</b>
+  ${err?`<p class="bad">${esc(err)}</p>`:""}<p class="mu">Làm theo file HUONG-DAN.txt rồi dán 2 thông tin sau:</p>
+  <label>Project ID</label><input id="cp" style="width:100%" placeholder="vd: benhvien-abc12">
+  <label>API Key</label><input id="ck" style="width:100%" placeholder="AIza...">
+  <button class="go pri" onclick="saveCfg()">Lưu và kết nối</button></div>`}
+function saveCfg(){const p=$("cp").value.trim(),k=$("ck").value.trim();if(!p||!k)return alert("Nhập đủ 2 ô");localStorage.setItem("cfg",JSON.stringify({p,k}));location.reload()}
+(async()=>{
+  const cfg=getCfg();if(!cfg){ready=true;showSetup();return}
+  try{
+    const d=makeCloudDb(cfg.p,cfg.k);
+    db={doc:p=>d.doc(p),setPin:h=>d.setPin(h),setPk:h=>d.setPk(h),setAd:h=>d.setAd(h),refresh:()=>d.refresh(),archive:(x,f)=>d.archive(x,f)};
+    d.onData((w,e,p,ar,pk,ad)=>{wards=w;events=e;pinHash=p||"";archDay=ar||"";pkHash=pk||"";adHash=ad||"";ready=true;if(!/INPUT|SELECT/.test((document.activeElement||{}).tagName||""))render()});
+    await d.start();
+  }catch(e){ready=true;showSetup(e.message)}
+})();
+</script>
+</body>
+</html>
