@@ -58,7 +58,7 @@ const CFG={p:"benhviendakhoatanuyen",k:"AIzaSyDvPKeRtt-t9_FiTOs__wwi2axK8S0EooQ"
 const TABS=[["sum","Tổng hợp"],["pk","Bệnh nhân vào viện"],["khoa","Bệnh nhân ra viện"],["ct","Bệnh nhân chuyển tỉnh"],["xf","Chuyển khoa"],["day","Số lượng bệnh nhân ra, vào, chuyển khoa theo ngày"],["set","Cài đặt"]];
 let tab="sum",wards=[],events=[],db=null,ready=false,selK="",selP="",qty={pk:1,khoa:1,xf:1,ct:1},xFrom="",xTo="";
 const $=id=>document.getElementById(id);
-let pend="",tt,pinHash="",unlocked=false,selDay="",archDay="",archSel="",actual={},when={pk:"",khoa:"",xf:"",ct:""},editId="",editN="",editA="",me=loadMe(),pkHash="",adHash="",selA="";
+let pend="",tt,pinHash="",unlocked=false,selDay="",archDay="",archSel="",actual={},when={pk:"",khoa:"",xf:"",ct:""},editId="",editN="",editA="",me=loadMe(),pkHash="",adHash="",selA="",sumDay="";
 const isAd=()=>!!me&&me.t==="admin";
 const curW=()=>isAd()?(wards.find(w=>w.id===selA)?selA:(selA=(wards[0]||{}).id)):me.id;
 const wardHead=r=>isAd()?`<label>Khoa (quản trị chọn khoa)</label><select onchange="selA=this.value;render()">${opts(r.id)}</select>`:`<p style="font-size:17px;margin:8px 0"><b>${esc(r.name)}</b></p>`;
@@ -250,15 +250,20 @@ function render(){
   if(tab==="day")return renderDay(a);
   if(tab==="xf")return renderXf(a,rows);
   if(tab==="sum"){
-    const T=rows.reduce((s,r)=>({b:s.b+(+r.beds||0),c:s.c+r.cur,i:s.i+r.inT,o:s.o+r.outT,ol:s.ol+censusAt(r,addDays(today(),-1)),tr:s.tr+r.inTr,ct:s.ct+r.ctT,xi:s.xi+r.xInT,xo:s.xo+r.xOutT}),{b:0,c:0,i:0,o:0,ol:0,tr:0,ct:0,xi:0,xo:0});
+    const t0=today(),d=sumDay&&sumDay<=t0?sumDay:t0,isT=d===t0;
+    const pick=`<div class="row" style="margin-bottom:10px"><b>Ngày báo cáo</b><input type="date" value="${d}" max="${t0}" onchange="sumDay=this.value;render()"><button class="sm" onclick="sumDay='';render()">Hôm nay</button><span class="mu">Tính từ <b>7h30 ${vnDate(d)}</b> đến <b>7h29 ${vnDate(addDays(d,1))}</b></span></div>`;
+    if(archDay&&d<=archDay){a.innerHTML=`<div class="card wide">${pick}<p class="msg">Số liệu đến hết ngày ${vnDate(archDay)} đã được chốt, không còn chi tiết theo ngày. Hãy chọn ngày sau đó.</p></div>`;return}
+    const ev=events.filter(e=>e.day===d),S=(l,f)=>l.filter(f).reduce((x,e)=>x+e.n,0);
+    const R=wards.map(w=>{const l=ev.filter(e=>e.ward===w.id);return{name:w.name,beds:+w.beds||0,ol:censusAt(w,addDays(d,-1)),cur:censusAt(w,d),inT:S(l,e=>e.type==="in"),inTr:S(l,e=>e.type==="in"&&isTruc(e.ts)),outT:S(l,e=>e.type==="out"||e.type==="tinh"),ctT:S(l,e=>e.type==="tinh"),xOutT:S(l,e=>e.type==="xfer"),xInT:S(ev,e=>e.type==="xfer"&&e.to===w.id)}});
+    const T=R.reduce((s,r)=>({b:s.b+r.beds,c:s.c+r.cur,i:s.i+r.inT,o:s.o+r.outT,ol:s.ol+r.ol,tr:s.tr+r.inTr,ct:s.ct+r.ctT,xi:s.xi+r.xInT,xo:s.xo+r.xOutT}),{b:0,c:0,i:0,o:0,ol:0,tr:0,ct:0,xi:0,xo:0});
     const pct=T.b?Math.round(T.c/T.b*100):0;
-    a.innerHTML=`<div class="card wide"><div class="stats"><div class="stat"><b>${T.c}</b><span>Đang điều trị</span></div><div class="stat"><b>${T.b}</b><span>Giường KH</span></div><div class="stat"><b class="${T.b-T.c<0?"bad":"ok"}">${T.b-T.c}</b><span>Giường trống</span></div></div>
+    a.innerHTML=`<div class="card wide">${pick}<div class="stats"><div class="stat"><b>${T.c}</b><span>${isT?"Đang điều trị":"BN hiện có cuối ngày"}</span></div><div class="stat"><b>${T.b}</b><span>Giường KH</span></div><div class="stat"><b class="${T.b-T.c<0?"bad":"ok"}">${T.b-T.c}</b><span>Giường trống</span></div></div>
     <div class="bar ${pct>100?"full":""}"><i style="width:${Math.min(100,pct)}%"></i></div>
-    <p class="mu">Hôm nay (${today().split("-").reverse().join("/")}): <span class="in">+${T.i} nhập viện</span> (trong đó ${T.tr} vào trực) · <span class="out">−${T.o} ra viện</span> (trong đó ${T.ct} chuyển tỉnh) · ${T.xi} lượt chuyển khoa</p></div>
+    <p class="mu">${isT?"Hôm nay":"Ngày"} (${vnDate(d)}): <span class="in">+${T.i} nhập viện</span> (trong đó ${T.tr} vào kíp trực) · <span class="out">−${T.o} ra viện</span> (trong đó ${T.ct} chuyển tỉnh) · ${T.xi} lượt chuyển khoa</p></div>
     <div class="card wrap wide"><table><thead><tr><th>Khoa</th><th>Giường KH</th><th>BN cũ</th><th>BN hiện có</th><th>Giường trống</th><th>%</th><th>Vào trong ngày<br>7h30–16h59</th><th>Vào kíp trực<br>17h00–7h29</th><th>Ra viện</th><th>Trong đó<br>chuyển tỉnh</th><th>Chuyển<br>đến</th><th>Chuyển<br>đi</th></tr></thead><tbody>
-    ${rows.map(r=>{const o=censusAt(r,addDays(today(),-1)),t=(+r.beds||0)-r.cur,p=r.beds?Math.round(r.cur/r.beds*100):0;return `<tr><td>${esc(r.name)}</td><td>${r.beds||0}</td><td>${o}</td><td><b>${r.cur}</b></td><td class="${t<0?"bad":""}">${t}</td><td class="${p>100?"bad":""}">${p}%</td><td class="in">+${r.inT-r.inTr}</td><td class="in">+${r.inTr}</td><td class="out">−${r.outT}</td><td class="out">${r.ctT}</td><td class="in">+${r.xInT}</td><td class="out">−${r.xOutT}</td></tr>`}).join("")}
+    ${R.map(r=>{const t=r.beds-r.cur,p=r.beds?Math.round(r.cur/r.beds*100):0;return `<tr><td>${esc(r.name)}</td><td>${r.beds}</td><td>${r.ol}</td><td><b>${r.cur}</b></td><td class="${t<0?"bad":""}">${t}</td><td class="${p>100?"bad":""}">${p}%</td><td class="in">+${r.inT-r.inTr}</td><td class="in">+${r.inTr}</td><td class="out">−${r.outT}</td><td class="out">${r.ctT}</td><td class="in">+${r.xInT}</td><td class="out">−${r.xOutT}</td></tr>`}).join("")}
     </tbody><tfoot><tr><td>TỔNG</td><td>${T.b}</td><td>${T.ol}</td><td>${T.c}</td><td class="${T.b-T.c<0?"bad":""}">${T.b-T.c}</td><td>${pct}%</td><td class="in">+${T.i-T.tr}</td><td class="in">+${T.tr}</td><td class="out">−${T.o}</td><td class="out">${T.ct}</td><td class="in">+${T.xi}</td><td class="out">−${T.xo}</td></tr></tfoot></table></div>
-    <p class="mu" style="text-align:center">Số liệu tự cập nhật khi các khoa nhập. "BN cũ" là số bệnh nhân hiện có lúc 7h30 sáng nay (cuối ngày báo cáo hôm trước). Ngày báo cáo tính từ 7h30 đến 7h30 hôm sau. "Vào trong ngày" là bệnh nhân vào 7h30–16h59, "Vào kíp trực" là vào 17h00–7h29 hôm sau. Cột "Ra viện" đã gồm cả bệnh nhân chuyển tỉnh. BN hiện có = BN cũ + Vào trong ngày + Vào kíp trực − Ra viện + Chuyển đến − Chuyển đi.</p>`;
+    <p class="mu" style="text-align:center">Số liệu tự cập nhật khi các khoa nhập. Ngày báo cáo tính từ 7h30 đến 7h29 sáng hôm sau. "BN cũ" là số bệnh nhân hiện có lúc 7h30 đầu ngày báo cáo. "Vào trong ngày" là bệnh nhân vào 7h30–16h59, "Vào kíp trực" là vào 17h00–7h29 sáng hôm sau. Cột "Ra viện" đã gồm cả bệnh nhân chuyển tỉnh. BN hiện có = BN cũ + Vào trong ngày + Vào kíp trực − Ra viện + Chuyển đến − Chuyển đi.</p>`;
   }else if(tab==="pk"){
     selP=curW();const r=rows.find(x=>x.id===selP)||rows[0];
     a.innerHTML=`<div class="card"><b>Bệnh nhân vào viện: nhập số bệnh nhân VÀO khoa</b>${wardHead(r)}
